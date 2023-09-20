@@ -1,0 +1,125 @@
+----------------------------------------------------------------------------
+ENTITIES:
+----------------------------------------------------------------------------
+
+USER (PK: NAME, EMAIL, AGE, ADDRESS, IS_CONSUMER, IS_CREATOR JOINING_DATE)
+
+CHANNEL (PK: CHANNEL_ID, CHANNEL_NAME, CREATE_DATE, NO_OF_SUBSCRIBER, FK1: OWNER_USER_ID)
+
+VIDEO (PK: VIDEO_ID, TITLE, URL, THUMBNAIL, CATEGORY, DURATION, DESCRIPTION, UPLOAD_DATE, UPLOAD_TIME, IS_TRANSCODING_DONE, FK1: CHANNEL_ID, FK2: UPLOAD_USER_ID)
+
+PLAYLIST (PK: PLAYLIST_ID, PLAYLIST_DURATION, PLAYLIST_VIDEO_COUNT, PLAYLIST_CREATION_TIME, PLAYLIST_CREATION_DATE, FK1: OWNER_USER_ID)
+
+CHANNEL_MONETIZATION_INFO (PK, FK1: CHANNEL_ID, TOTAL_MONETIZATION_REVENUE, AVG_MONETIZATION_PER_VIDEO, HIGHEST_MONETIZED_VIDEO)
+
+IDENTIFICATION_METADATA (PK: TAG_OR_KEYWORD_ID, TAG_KEYWORD_NAME, CREATION_DATE, CREATION_TIME)
+
+SPONSOR (PK: SPONSOR_ID, SPONSOR_NAME, SPONSOR_PHONE_NO, SPONSOR_EMAIL, SPONSOR_ADDRESS, SPONSOR_BANK_ACCOUNT)
+
+VIDEO_STATISTICS (PK, FK1: VIDEO_ID, NO_OF_LIKES, NO_OF_VIEWS, NO_OF_COMMENTS, NO_OF_SHARES)
+
+----------------------------------------------------------------------------
+BRIDGE ENTITIES:
+----------------------------------------------------------------------------
+
+PLAYLIST_VIDEO_MAPPING (PK, FK1: PLAYLIST_ID, PK, FK2: VIDEO_ID, PLAYLIST_VIDEO_ADD_DATE, PLAYLIST_VIDEO_ADD_TIME)
+
+IDENTIFICATION_METADATA_VIDEO_MAPPING (PK, FK1: TAG_OR_KEYWORD_ID, PK, FK2: VIDEO_ID, ASSIGNED_DATE, ASSIGNED_TIME)
+
+VIDEO_SPONSOR_MAPPING (PK: VS_MAPPING_RECORD_ID, SPONSORED_AMOUNT, VIDEO_ID, SPONSOR_ID)
+NOTE: VIDEO_SPONSOR_MAPPING is a Strong Entity as a brand new PK has been created VS_MAPPING_RECORD_ID for the bridge table. Reason behind creating a brand new PK is that the sponsorship might require reciepts/advising to the sponsors and users so it is important to have a separate unique ID to improve the ease of operations.
+
+HISTORY (PK: WATCH_TIMESTAMP, PK, FK1: USER_ID, PK, FK2: VIDEO_ID)
+
+COMMENTS (PK: COMMENT_ID, TEXT, IS_REPLY, SENTIMENTS, NO_OF_LIKES, COMMENT_TIMESTAMP, FK1: VIDEO_ID, FK2: USER_ID, FK3: PARENT_COMMENT_ID)
+NOTE: COMMENTS is a Strong Entity as a brand new PK has been created COMMENT_ID for the bridge table. Reason behind creating a brand new PK is that a comment can have replies (child comment) so it is important to have a separate unique ID to easily map a relationship between them.
+
+LIKES (PK, FK1: USER_ID, PK, FK2: VIDEO_ID, LIKE_DATE, LIKE_TIME)
+
+SUBSCRIPTION (PK: SUBSCRPTION_RECORD_ID, IS_PAID_SUBSCRIPTION, FK1: CHANNEL_ID, FK2: USER_ID)
+
+NOTE: SUBSCRIPTION is a Strong Entity as a brand new PK has been created SUBSCRPTION_RECORD_ID for the bridge table. Reason behind creating a brand new PK is that the subscription is paid and might require reciepts/advising to the user so it is important to have a separate unique ID to improve the ease of operations
+
+----------------------------------------------------------------------------
+INHERITANCE:
+----------------------------------------------------------------------------
+
+(SUBTYPE OF SUPERTYPE USER)
+    The USER supertype entity has two subtypes entity shown below
+    Subtype discriminator used here is IS_CREATOR and IS_CONSUMER. 
+    The inheritance follows overlapping and total completeness constraint
+
+    VIDEO_CONSUMER (PK, FK1: USER_ID, AVERAGE_DAILY_CONSUMPTION, NO_OF_CHANNELS_SUBSCRIBED)
+
+    VIDEO_CREATOR (PK, FK1: USER_ID, NO_OF_CHANNELS_OWNED, HOURS_OF_CONTENT_UPLOADED)
+
+(SUBTYPE OF VIDEO)
+    The VIDEO supertype entity has two subtypes entity shown below
+    Subtype discriminator used here is CATEGORY. 
+    The inheritance follows disjoint and partial completeness constraint.
+    INFORMATIONAL_VIDEO (PK, FK1: VIDEO_ID, NO_OF_KEYWORDS)
+
+    ENTERTAINMENT_VIDEO (PK, FK1: VIDEO_ID, NO_OF_TAGS)
+
+(SUBTYPE OF SUBSCRIPTION)
+    The SUBSCRIPTION supertype entity has two subtypes entity shown below. Subtype discriminator used here is IS_PAID_SUBSCRIPTION. 
+    The inheritance follows disjoint and total completeness constraint.
+    PAID_SUBSCRIPTION (PK, FK1: SUBSCRIPTION_RECORD_ID, SUBSCRIPTION_VALIDITY, SUBSCRIPTION_AMOUNT)
+
+    FREE_SUBSCRIPTION  (PK, FK1: SUBSCRIPTION_RECORD_ID, WAS_OLD_SUBSCRIBED_USER)
+
+----------------------------------------------------------------------------
+RELATIONSHIPS:
+----------------------------------------------------------------------------
+
+USER <-> VIDEOS (LIKES BRIDGE): Optional Many to Optional Many
+One USER Likes many VIDEOS and one VIDEO Is Liked by many USERS
+Therefore, a bridge table LIKES is created to map USER records and VIDEO records.
+
+USER <-> VIDEOS (COMMENT BRIDGE): Optional Many to Optional Many
+One USER comments on many VIDEOS and one VIDEO Is commented by many USERS
+Therefore, a bridge table COMMENT is created to map USER records and VIDEO records.
+
+USER <-> CHANNEL (SUBSCRIPTION BRIDGE): Optional Many to Optional Many
+One USER can subscribe to zero or many VIDEOS and one CHANNEL Is subscribed by zero or many USERS
+Therefore, a bridge table SUBSCRIPTION is created to map USER records and CHANNEL records.
+
+USER <-> PLAYLIST: One to Optional Many
+One USER owns zero or many PLAYLISTS and one PLAYLIST Is owned by only one USER.
+
+VIDEO_CONSUMER <-> VIDEOS (HISTORY BRIDGE): Optional Many to Optional Many
+One VIDEO_CONSUMER Watches many VIDEOS and one VIDEO Is watched by many VIDEO_CONSUMER
+Therefore, a bridge table HISTORY is created to map USER records and VIDEO records
+
+VIDEO_CREATOR <-> CHANNEL: One to Mandatory Many
+One VIDEO_CREATOR creates one or many CHANNEL and one CHANNEL Is created by only one VIDEO_CREATOR
+
+VIDEO_CREATOR <-> VIDEO: One to Optional Many
+One VIDEO_CREATOR uploads zero or many VIDEO and one VIDEO is owned by only one VIDEO_CREATOR
+
+ CHANNEL <-> VIDEO: One to Optional Many
+One CHANNEL owns zero or many VIDEOS and one VIDEO Is owned by only one CHANNEL
+
+CHANNEL <-> CHANNEL_MONETIZATION_INFO: One to One 
+One CHANNEL generate only one CHANNEL_MONETIZATION_INFO and oNE CHANNEL_MONETIZATION_INFO Is generated by only one CHANNEL.
+
+VIDEO <-> VIDEO_STATISTICS: One to One
+One VIDEO generate only one VIDEO_STATISTICS and one VIDEO_STATISTICS Is generated by only one VIDEO.
+
+VIDEO <-> SPONSOR (VIDEO_SPONSOR_MAPPING BRIDGE): Mandatory Many to Optional Many
+One VIDEO is sponsored by many SPONSORS and one SPONSOR sponsors many USERS
+Therefore, a bridge table VIDEO_SPONSOR_MAPPING is created to map SPONSOR records and VIDEO records.
+
+VIDEO <-> IDENTIFICATION_METADATA (IDENTIFICATION_METADATA_VIDEO_MAPPING BRIDGE):  Mandatory Many to Mandatory Many
+One VIDEO is assigned many IDENTIFICATION_METADATA tags or keywords and one IDENTIFICATION_METADATA tag or keyword is assigned to many VIDEO.
+Therefore, a bridge table IDENTIFICATION_METADATA_VIDEO_MAPPING is created to map IDENTIFICATION_METADATA records and VIDEO records.
+
+VIDEO <-> PLAYLIST (PLAYLIST_VIDEO_MAPPING BRIDGE): Mandatory Many to Optional Many
+One VIDEO is added to zero or many PLAYLIST and one PLAYLIST has one or many VIDEOS added in it.
+Therefore, a bridge table PLAYLIST_VIDEO_MAPPING is created to map VIDEO records and PLAYLIST records.
+
+COMMENTS <-> COMMENTS: One to Optional Many
+One COMMENT has one Parent COMMENT and one Parent COMMENT has zero or many child COMMENT
+
+----------------------------------------------------------------------------
+
